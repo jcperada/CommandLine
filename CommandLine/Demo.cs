@@ -1,11 +1,12 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
-using System.Text;
+using System.Reflection;
 using System.Text.RegularExpressions;
 using System.Threading;
-using System.Threading.Tasks;
+using static System.Console;
 
 namespace CommandLine
 {
@@ -31,7 +32,6 @@ namespace CommandLine
             if (terminators.Count(t => t == cmd.ToLower()) > 0)
                 Terminate();
 
-            Write(string.Format("Invoked: {0}", cmd));
             Run(args);
         }
 
@@ -39,9 +39,9 @@ namespace CommandLine
 
         static void Terminate()
         {
-            Write("Continue on exit? (Y/N)");
+            WriteLine("Continue on exit? (Y/N)");
             var result = Console.ReadKey();
-            Write();
+            WriteLine();
             if (char.ToUpper(result.KeyChar) == 'Y')
             {
                 Write("Goodbye!");
@@ -52,15 +52,10 @@ namespace CommandLine
             {
                 if (char.ToUpper(result.KeyChar) != 'N')
                 {
-                    Write("Invalid input!");
+                    WriteLine("Invalid input!");
                     Terminate();
                 }
             }
-        }
-
-        static void Write(string msg = "")
-        {
-            Console.WriteLine(msg);
         }
 
         static string Read(string[] args, bool runOnce, string promptMsg = "")
@@ -70,7 +65,7 @@ namespace CommandLine
             if (runOnce)
                 Environment.Exit(0);
 
-            Console.Write("demo > {0} ", promptMsg.Trim());
+            Write("Demo > {0} ", promptMsg.Trim());
             return Console.ReadLine().Trim();
         }
 
@@ -105,7 +100,10 @@ namespace CommandLine
             foreach (var item in args)
             {
                 if (!IsOption(item))
+                {
+                    WriteLine("'{0}' is currently not recognized by this cmd tool.", item);
                     continue;
+                }
 
                 var cmd = item.Substring(1).ToLower();
                 switch (cmd)
@@ -114,23 +112,32 @@ namespace CommandLine
                     case "list":
                         ListItems(Environment.CurrentDirectory);
                         break;
+                    case "h":
+                    case "help":
+                        ShowHelp();
+                        break;
                     default:
+                        WriteLine("'-{0}' is currently not recognized by this cmd tool.", cmd);
                         break;
                 }
             }
+
         }
 
         #region Option Commands
         static readonly int padLength = 4;
         static readonly string truncated = "... ";
 
-        static string breakLine(int count, int padCount)
+        static string breakLine(int clusters)
         {
-            return new string('=', padLength * padCount * count);
+            return new string('=', padLength * clusters);
         }
 
         static string appendTab(string value, int padCount)
         {
+            if (padCount < 1)
+                return value;
+
             var padding = new string(' ', padLength * padCount);
             var result = value + padding;
             if (result.Length > padding.Length)
@@ -155,24 +162,24 @@ namespace CommandLine
         static void WriteFileInfo(string fileName)
         {
             var info = new FileInfo(fileName);
-            Write(appendTab(info.Name, fileNameLimit) + appendTab(info.Attributes, attributeLimit) +
+            WriteLine(appendTab(info.Name, fileNameLimit) + appendTab(info.Attributes, attributeLimit) +
                 appendTab(string.Format("{0:#,#0}", info.Length), sizeLimit));
         }
 
         static void WriteDirectoryInfo(string directory)
         {
             var info = new DirectoryInfo(directory);
-            Write(appendTab(info.Name, fileNameLimit) + appendTab(info.Attributes, attributeLimit));
+            WriteLine(appendTab(info.Name, fileNameLimit) + appendTab(info.Attributes, attributeLimit));
         }
 
         static void ListItems(string directory, bool recursiveList = false)
         {
-            var br = breakLine(1, fileNameLimit) + breakLine(1, attributeLimit) + breakLine(1, sizeLimit);
+            var br = breakLine(fileNameLimit) + breakLine(attributeLimit) + breakLine(sizeLimit);
             try
             {
-                Write(br);
-                Write(appendTab("File Name", fileNameLimit) + appendTab("Type", attributeLimit) + appendTab("Size", sizeLimit));
-                Write(br);
+                WriteLine(br);
+                WriteLine(appendTab("File Name", fileNameLimit) + appendTab("Attributes", attributeLimit) + appendTab("Size", sizeLimit));
+                WriteLine(br);
                 if (recursiveList)
                     foreach (string d in Directory.GetDirectories(directory))
                     {
@@ -180,16 +187,32 @@ namespace CommandLine
                             WriteFileInfo(f);
 
                         ListItems(d);
-                    }                foreach (string d in Directory.GetDirectories(directory))
+                    }
+                foreach (string d in Directory.GetDirectories(directory))
                     WriteDirectoryInfo(d);
                 foreach (string f in Directory.GetFiles(directory))
                     WriteFileInfo(f);
             }
             catch (Exception e)
             {
-                Write(e.Message);
+                WriteLine(e.Message);
             }
-            Write(br);
+            WriteLine(br);
+        }
+
+        static void ShowHelp()
+        {
+            var assembly = Assembly.GetExecutingAssembly();
+            var fvi = FileVersionInfo.GetVersionInfo(assembly.Location);
+            WriteLine("{0} Version {1}", fvi.ProductName, fvi.ProductVersion);
+            WriteLine(fvi.LegalCopyright);
+            WriteLine(fvi.Comments);
+            WriteLine();
+            WriteLine("Available commands:");
+            WriteLine();
+            WriteLine(appendTab("", 2) + appendTab("li, list", 4) + appendTab("Lists all files in the current directory.", 0));
+            WriteLine(appendTab("", 2) + appendTab("h, help", 4) + appendTab("Displays 'Help' contents.", 0));
+            WriteLine();
         }
         #endregion
     }

@@ -6,7 +6,7 @@ using System.Runtime.InteropServices;
 // set of attributes. Change these attribute values to modify the information
 // associated with an assembly.
 [assembly: AssemblyTitle("Command Line")]
-[assembly: AssemblyDescription("Just for fun command line tool")]
+[assembly: AssemblyDescription("Just for fun bash-like command line tool")]
 [assembly: AssemblyConfiguration("")]
 [assembly: AssemblyCompany("JP Solutions, Inc.")]
 [assembly: AssemblyProduct("Command Line")]
